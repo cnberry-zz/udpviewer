@@ -13,8 +13,8 @@
 using namespace cimg_library;
 
 
-void* viewer() {
-    CImg<unsigned char> img(640,480,1,3,0);
+void* viewer(unsigned int p, unsigned int h, unsigned int w) {
+    CImg<unsigned char> img(w,h,1,3,0);
     CImgDisplay disp(img,"UDP Image Viewer");
     const unsigned char white[] = { 255,255,255 }, red[] = { 128,0,0 };
     int sockfd; 
@@ -33,7 +33,7 @@ void* viewer() {
 	// Filling server information 
 	servaddr.sin_family = AF_INET; // IPv4 
 	servaddr.sin_addr.s_addr = INADDR_ANY; 
-	servaddr.sin_port = htons(PORT); 
+	servaddr.sin_port = htons(p); 
 	
 	// Bind the socket with the server address 
 	if ( bind(sockfd, (const struct sockaddr *)&servaddr, 
@@ -79,8 +79,8 @@ void* viewer() {
     return 0;
 }
 
-void* bar() {
-    CImg<unsigned char> img(640,480,1,3,0); 
+void* bar(const char* ip, const unsigned int p, const unsigned int h, const unsigned int w, const unsigned int b) {
+    CImg<unsigned char> img(w,h,1,3,0); 
                   
 	int sockfd; 
 	struct sockaddr_in	 servaddr; 
@@ -95,8 +95,8 @@ void* bar() {
 	
 	// Filling server information 
 	servaddr.sin_family = AF_INET; 
-	servaddr.sin_port = htons(PORT); 
-	servaddr.sin_addr.s_addr = INADDR_ANY; 
+	servaddr.sin_port = htons(p); 
+	servaddr.sin_addr.s_addr = inet_addr(ip);//INADDR_ANY; 
 	
 
     cimg_forXY(img,x,y) 
@@ -122,11 +122,11 @@ void* bar() {
         // Send single image
         unsigned int bytes = 0;
         while (bytes < img.size()) {
-            if (sendto(sockfd, (unsigned char *) img.data()+bytes, 2048, 0, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+            if (sendto(sockfd, (unsigned char *) img.data()+bytes, b, 0, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
 	            perror("sendto failed");
 	            return 0;
             }
-            bytes += 2048;
+            bytes += b;
             usleep(1);
         }
         //img.display();
@@ -147,12 +147,13 @@ int main(int argc, char **argv) {
   const unsigned int h = cimg_option("-height",480,"Image height");
   const unsigned int w = cimg_option("-width",640,"Image witdh");
   const unsigned int p = cimg_option("-port",8080,"UDP Port");
+  const unsigned int b = cimg_option("-bytes",2048,"UDP payload size");
   const char* ip = cimg_option("-port","127.0.0.1","Server IP address");
 
   if ( genbar )
-      bar();
+      bar(ip,p,h,w,b);
   else
-    viewer();
+    viewer(p,h,w);
 
   // Exit demo
   //-----------
